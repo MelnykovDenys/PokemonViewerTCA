@@ -1,0 +1,7 @@
+*.xcuserstate
+*.xcbkptlist
+*.xcscheme
+**/xcshareddata/
+**/xcuserdata/
+**/xcschemes/xcschememanagement.plist
+*.xcworkspacedata
