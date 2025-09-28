@@ -30,7 +30,6 @@ struct PokemonListFeature {
         case pokemonsFetched([Pokemon])
         case pokemonSelected(Pokemon)
         case toggleFavoritePokemon(Pokemon)
-        
         case fetchedAllData(favorites: Set<Int>, pokemons: [Pokemon])
     }
     

@@ -37,10 +37,17 @@ extension PokemonListView {
     
     private var listView: some View {
         List(store.pokemons) { pokemon in
-            pokemonCellView(pokemon)
-                .onTapGesture {
-                    store.send(.pokemonSelected(pokemon))
-                }
+            LazyVStack {
+                pokemonCellView(pokemon)
+                    .onTapGesture {
+                        store.send(.pokemonSelected(pokemon))
+                    }
+                    .onAppear {
+                        if pokemon.id == store.pokemons.last?.id {
+                            store.send(.fetchPokemons)
+                        }
+                    }
+            }
         }
         .listStyle(.plain)
     }
