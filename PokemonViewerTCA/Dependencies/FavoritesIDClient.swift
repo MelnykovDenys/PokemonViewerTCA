@@ -31,6 +31,15 @@ extension FavoritesIDClient: DependencyKey {
             UserDefaults.standard.set(Array(ids), forKey: key)
         })
     }
+    
+    static var previewValue: FavoritesIDClient {
+        FavoritesIDClient {
+            return [0, 5]
+        } updateFavorite: { _ in
+            
+        }
+
+    }
 }
 
 extension DependencyValues {

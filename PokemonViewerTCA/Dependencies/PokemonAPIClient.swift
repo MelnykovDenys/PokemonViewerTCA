@@ -46,6 +46,21 @@ extension PokemonAPIClient: DependencyKey {
             return pokemons
         }
     }
+    
+    static var previewValue: PokemonAPIClient {
+        PokemonAPIClient {
+            offset,
+            limit in
+            try await Task.sleep(for: .seconds(3))
+            return [Pokemon(
+                id: 1,
+                name: "TestName",
+                height: 20,
+                weight: 30,
+                imageURLString: "https://cdn.pixabay.com/photo/2021/12/26/17/31/pokemon-6895600_1280.png"
+            )]
+        }
+    }
 }
 
 extension DependencyValues {

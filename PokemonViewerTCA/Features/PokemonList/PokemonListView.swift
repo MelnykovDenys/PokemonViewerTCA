@@ -27,6 +27,20 @@ struct PokemonListView: View {
     }
 }
 
+#Preview {
+    let store = Store(
+        initialState: PokemonListFeature.State(),
+        reducer: { PokemonListFeature()
+        }
+    )
+    PokemonListView(
+        store: store
+    )
+    .onAppear {
+        store.send(.fetchPokemons)
+    }
+}
+
 extension PokemonListView {
     
     private var listView: some View {
