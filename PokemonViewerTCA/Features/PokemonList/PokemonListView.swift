@@ -10,25 +10,19 @@ import ComposableArchitecture
 
 struct PokemonListView: View {
     
-    let store: StoreOf<PokemonListFeature>
+    @Bindable var store: StoreOf<PokemonListFeature>
     
     var body: some View {
         NavigationStack {
             listView
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        if store.isLoading {
-                            ProgressView()
-                        }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        HStack {
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.tint)
-                            Text("\(store.state.favoritePokemonsCount)")
-                        }
-                    }
+                    toolbarContent
                 }
+                .navigationDestination(
+                    item: $store.scope(state: \.selectedPokemon,
+                                       action: \.detailsPokemonAction),
+                    destination: PokemonDetailsView.init
+                )
         }
     }
 }
@@ -52,7 +46,23 @@ extension PokemonListView {
         .listStyle(.plain)
     }
     
-    @ViewBuilder
+    private var toolbarContent: some ToolbarContent {
+        Group {
+            ToolbarItem(placement: .topBarLeading) {
+                if store.isLoading {
+                    ProgressView()
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(.tint)
+                    Text("\(store.state.favoritePokemonsCount)")
+                }
+            }
+        }
+    }
+    
     private func pokemonCellView(_ pokemon: Pokemon) -> some View {
         HStack(alignment: .top) {
             AsyncImage(url: URL(string: pokemon.imageURLString)) { image in

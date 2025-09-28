@@ -17,12 +17,15 @@ struct PokemonListFeature {
         var pokemons: [Pokemon] = []
         var isLoading: Bool = false
         var favoritePokemonsCount: Int = 0
+        
         @ObservationStateIgnored
         var allPokemons: [Pokemon] = []
         @ObservationStateIgnored
         var currentOffset: Int = 0
         @ObservationStateIgnored
         var allPokemonsLoaded: Bool = false
+        @Presents
+        var selectedPokemon: PokemonDetailsFeature.State?
     }
     
     enum Action {
@@ -31,6 +34,7 @@ struct PokemonListFeature {
         case pokemonSelected(Pokemon)
         case toggleFavoritePokemon(Pokemon)
         case fetchedAllData(favorites: Set<Int>, pokemons: [Pokemon])
+        case detailsPokemonAction(PresentationAction<PokemonDetailsFeature.Action>)
     }
     
     @Dependency(\.pokemonAPIClient) var pokemonAPIClient
@@ -40,26 +44,35 @@ struct PokemonListFeature {
         Reduce { state, action in
             switch action {
             case .fetchPokemons:
-                return processPokemonFetch(for: &state)
+                return pokemonFetchProcess(for: &state)
             case .pokemonsFetched(let pokemons):
-                return processFetchedPokemons(pokemons, for: &state)
+                return fetchedPokemonsProcess(pokemons, for: &state)
             case .pokemonSelected(let pokemon):
-                debugPrint("selected all cell for \(pokemon.name)")
+                state.selectedPokemon = .init(pokemon: pokemon)
                 return .none
             case .toggleFavoritePokemon(let pokemon):
-                return proccessToggleFavoritePokemon(pokemon: pokemon, for: &state)
+                return toggleFavoritePokemonProcess(pokemon: pokemon,
+                                                     for: &state)
             case .fetchedAllData(let favorites, let pokemons):
-                state.pokemons = mapAllPokemons(pokemons, favoriteIds: favorites)
-                state.favoritePokemonsCount = favorites.count
+                return fetchedAllDataProcess(pokemons: pokemons,
+                                             favorites: favorites,
+                                             for: &state)
+            case .detailsPokemonAction(.presented(.toggleFavoritePokemon(let pokemon))):
+                return toggleFavoritePokemonProcess(pokemon: pokemon,
+                                                     for: &state)
+            default:
                 return .none
             }
+        }
+        .ifLet(\.$selectedPokemon, action: \.detailsPokemonAction) {
+            PokemonDetailsFeature()
         }
     }
 }
 
 extension PokemonListFeature {
     // MARK: pokemonsFetch
-    private func processPokemonFetch(for state: inout State) -> Effect<Action> {
+    private func pokemonFetchProcess(for state: inout State) -> Effect<Action> {
         guard !state.isLoading,
               !state.allPokemonsLoaded else {
             return .none
@@ -79,7 +92,7 @@ extension PokemonListFeature {
     }
     
     // MARK: pokemonsFetched
-    private func processFetchedPokemons(
+    private func fetchedPokemonsProcess(
         _ pokemons: [Pokemon],
         for state: inout State
     ) -> Effect<Action> {
@@ -92,7 +105,7 @@ extension PokemonListFeature {
         state.currentOffset += fetchLimit
         let combinedList = state.allPokemons + pokemons
         state.allPokemons = combinedList
-                
+
         return .run { send in
             let favoriteIDs = await favoriteIDClient.fetchFavorites()
             await send(.fetchedAllData(favorites: favoriteIDs,
@@ -101,20 +114,38 @@ extension PokemonListFeature {
     }
     
     //MARK: toggleFavoritePokemon
-    private func proccessToggleFavoritePokemon(
+    private func toggleFavoritePokemonProcess(
         pokemon: Pokemon,
         for state: inout State
     ) -> Effect<Action> {
         let allPokemons = state.allPokemons
+        let pokemonID = pokemon.id
         return .run { send in
-            await favoriteIDClient.updateFavorite(pokemon.id)
+            await favoriteIDClient.updateFavorite(pokemonID)
             let favoriteIDs = await favoriteIDClient.fetchFavorites()
             await send(.fetchedAllData(favorites: favoriteIDs,
                                        pokemons: allPokemons))
         }
     }
     
-    // MARK: Mapping
+    // MARK: fetchedAllData
+    private func fetchedAllDataProcess(
+        pokemons: [Pokemon],
+        favorites: Set<Int>,
+        for state: inout State
+    ) -> Effect<Action> {
+        state.pokemons = mapAllPokemons(pokemons, favoriteIds: favorites)
+        state.favoritePokemonsCount = favorites.count
+       
+        //update details state if need 
+        if let selectedPokemonID = state.selectedPokemon?.pokemon.id,
+           let updatedPokemon = state.pokemons.first(where: { $0.id == selectedPokemonID }) {
+            
+            state.selectedPokemon?.pokemon = updatedPokemon
+        }
+        return .none
+    }
+    
     private func mapAllPokemons(_ pokemons: [Pokemon],
                                 favoriteIds: Set<Int>) -> [Pokemon] {
         return pokemons.map { pokemon in
